@@ -99,7 +99,7 @@ int main() {
 
         cout << "origin_url: " << a << "\n";
         cout << "action_url: " << b << "\n";
-        cout << "username_value: " << c << "\n";
+        cout << "username: " << c << "\n";
 
         //read blob data then decrypt it
         char* blob;
@@ -114,8 +114,8 @@ int main() {
         //write to file
         fout << "origin_url: " << a << "\n";
         fout << "action_url: " << b << "\n";
-        fout << "username_value: " << c << "\n";
-        fout << "username_value: " << de << "\n\n\n";
+        fout << "username: " << c << "\n";
+        fout << "password: " << de << "\n\n\n";
     }
     sqlite3_finalize(stmt);
     sqlite3_close(db);
