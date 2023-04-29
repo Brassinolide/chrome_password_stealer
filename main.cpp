@@ -116,6 +116,7 @@ int main() {
         fout << "username_value: " << c << "\n";
         fout << "username_value: " << de << "\n\n\n";
     }
+    sqlite3_finalize(stmt);
     sqlite3_close(db);
     fout.close();
 
