@@ -1,5 +1,5 @@
 # chrome_password_stealer
-Hacking Chrome Saved Passwords (Chrome 112)
+Hacking Chrome Saved Passwords (Chrome 116)
 
 ![version](./version.png)
 
