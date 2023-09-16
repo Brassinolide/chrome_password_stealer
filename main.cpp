@@ -4,7 +4,9 @@
 #include <shlobj.h>
 #include <fstream>
 #include <chrono>
-//slproweb.com/download/Win32OpenSSL-3_1_0.exe
+
+//win32 binary: slproweb.com/download/Win32OpenSSL-3_1_2.exe
+//win64 binary: slproweb.com/download/Win64OpenSSL-3_1_2.exe
 #include <openssl/evp.h>
 
 #include "json.hpp"
